@@ -1,20 +1,24 @@
-library(shiny)
-library(pedtools)
-library(pedprobr)
-library(forrel)
-library(tibble)
-library(ggplot2)
-library(patchwork)
-library(tidyr)
+suppressMessages(suppressPackageStartupMessages({
+  library(shiny)
+  library(shinyjs)
+  library(pedtools)
+  library(pedprobr)
+  library(forrel)
+  library(tibble)
+  library(ggplot2)
+  library(patchwork)
+  library(tidyr)
+  library(plotly)
+}))
 
-CASES = c("Duo : unrel",
-          "Sibs : unrel",
-          "Halfsibs : unrel",
-          "Grandp : unrel",
-          "Sibs : halfsibs",
-          "Grandp : uncle",
-          "Grandp : halfsibs",
-          "Uncle : halfsibs")
+CASES = c("Duo : unrelated",
+          "Sibs : unrelated",
+          "Half-sibs : unrelated",
+          "Grandparent : unrelated",
+          "Sibs : half-sibs",
+          "Grandparent : uncle",
+          "Grandparent : half-sibs",
+          "Uncle : half-sibs")
 names(CASES) = CASES
 
 IDS = c("A", "B")
@@ -28,20 +32,21 @@ VARIABLES = c(
   "Distance (centiMorgan)" = "dist",
   "Recombination rate" = "rho",
   "Mutation rate" = "mutrate",
-  "Frequency of '1'" = "freq")
+  "Frequency of '1' allele" = "freq")
 
-debug = FALSE
+debug = T
 
 
 
 ui = fluidPage(
+  useShinyjs(),
 
   tags$head(tags$style(HTML("
   .well {margin-bottom: 6px; padding: 15px}
-  .inline label{ display: table-cell; padding-right:3px }
+  .inline label{ display: table-cell; padding-right:3px; white-space: nowrap;}
   .inline .form-group { display: table-row;}
-  .form-control {padding: 0px 1px 0px 8px}
-  #variable .form-group {margin-bottom: 0px}
+  .form-control {padding: 3px 1px 3px 8px; height: auto; margin-top:1px; margin-bottom:1px;}
+  #variable .form-group {margin-bottom: 0px; white-space: nowrap;}
   #lastrow .form-group {margin-bottom: 0px}
   "))),
 
@@ -52,7 +57,7 @@ ui = fluidPage(
 
 
   sidebarLayout(
-    sidebarPanel(width = 3, style = "min-width:200px;",
+    sidebarPanel(width = 3, #style = "max-width:400px;",
       selectInput("comp", label = "Comparison", choices = CASES, selected = "Sibs : halfsibs"),
 
       HR,
@@ -65,13 +70,13 @@ ui = fluidPage(
       tags$div(class = "inline",
       fluidRow(
         column(6, style = "padding-right: 5px", wellPanel(
-          style = "padding: 5px",
+          style = "padding: 5px; border-color: silver;",
           p("A", style = "font-size: 18px; text-align: center; margin-bottom:0px"),
           textInput("A1", "M1:", width = "100%"),
           textInput("A2", "M2:", width = "100%")
         )),
         column(6, style = "padding-left: 5px", wellPanel(
-          style = "padding: 5px",
+          style = "padding: 5px; border-color: silver;",
           p("B", style = "font-size: 18px; text-align: center; margin-bottom:0px"),
           textInput("B1", "M1:", width = "100%"),
           textInput("B2", "M2:", width = "100%")
@@ -80,47 +85,49 @@ ui = fluidPage(
 
       actionButton("updatePeds", "Update pedigrees", style = "padding: 2px; margin-top:5px",
                    width = "100%", class = "btn-success"),
-
-
       HR,
 
       h4("Frequencies"),
       tags$div(class = "inline",
         fluidRow(
-          column(6, numericInput("p1", label = "1:", value = 0.1, min = 0, max = 1, step = 0.01, width = "100%")),
-          column(6, numericInput("p2", label = "2:", value = 0.2, min = 0, max = 1, step = 0.01, width = "100%")),
+          column(6, numericInput("p1", label = "1:", value = 0.1, min = 0, max = 1, step = 0.1, width = "100%")),
+          column(6, numericInput("p2", label = "2:", value = 0.2, min = 0, max = 1, step = 0.1, width = "100%")),
         ),
         fluidRow(
-          column(6, numericInput("p3", label = "3:", value = 0.3, min = 0, max = 1, step = 0.01, width = "100%")),
-          column(6, numericInput("p4", label = "4:", value = 0.4, min = 0, max = 1, step = 0.01, width = "100%")),
+          column(6, numericInput("p3", label = "3:", value = 0.3, min = 0, max = 1, step = 0.1, width = "100%")),
+          column(6, numericInput("p4", label = "4:", value = 0.4, min = 0, max = 1, step = 0.1, width = "100%")),
         ),
       ),
 
       HR,
 
       tags$div(class = "inline",
-        numericInput("cm",    "Distance (cm):", value = 0, step = 1, min = 0, width = "100%"),
-        numericInput("rho",   "Recomb rate:", value = 0, step = 0.01, min = 0, max = 1, width = "100%"),
-        numericInput("mrate", "Mutation rate:", value = 0.001, step = 0.001, min = 0, max = 1, width = "100%")
+        numericInput("cm",    "Dist (cm):", value = 0, step = 1, min = 0, width = "100%"),
+        numericInput("rho",   "Rec. rate:", value = 0, step = 0.01, min = 0, max = 1, width = "100%"),
+        numericInput("mrate", "Mut. rate:", value = 0, step = 0.01, min = 0, max = 1, width = "100%")
       ),
 
-      tags$div(id = "variable", selectInput("variable", "Variable", choices = VARIABLES)),
+      HR,
+      tags$div(id = "variable", selectInput("variable", "Plot variable", choices = VARIABLES),
+               style = "margin-bottom: 10px"),
       fluidRow(id = "lastrow",
-        column(6, numericInput("npoints", "Points", value = 10, min = 5, max = 50, step = 5)),
-        column(6, actionButton("compute", "Plot!", class = "btn-primary", width = "100%",
-                               style = "margin-top: 15px; font-size: 150%")),
+        column(6, numericInput("npoints", "Points", value = 11, min = 5, max = 50, step = 1)),
+        #column(6, actionButton("compute", "Plot!", class = "btn-primary", width = "100%",
+        #                       style = "margin-top: 15px; font-size: 150%")),
       )
 ),
     # Plots
     mainPanel(width = 9, align = "left",
       fluidRow(
         column(width = 5, align = "left", style = "max-width:400px",
-          plotOutput("pedplot1", height = "327px"),
+          plotOutput("pedplot1", height = "325px"),
           tags$div(style = "text-align: center", htmlOutput("ibs")),
-          plotOutput("pedplot2", height = "327px")
+          plotOutput("pedplot2", height = "325px")
         ),
         column(width = 7, align = "left", style = "max-width:600px",
-          plotOutput("graphs", height = "674px"),
+          plotlyOutput("graph1", height = "325px"),
+          tags$div(style = "height:20px"),
+          plotlyOutput("graph2", height = "325px"),
         )
       )
     )
@@ -132,8 +139,20 @@ server = function(input, output, session) {
 
   genodat = reactive({
     if(debug) message("genodat")
+
     g = cbind(M1 = c(A = input$A1, B = input$B1),
               M2 = c(A = input$A2, B = input$B2))
+    gg = fix2(g)
+    if(!identical(g, gg)) {
+      g = gg
+      isolate({
+        updateTextInput(session, "A1", value = g[["A", "M1"]])
+        updateTextInput(session, "A2", value = g[["A", "M2"]])
+        updateTextInput(session, "B1", value = g[["B", "M1"]])
+        updateTextInput(session, "B2", value = g[["B", "M2"]])
+      })
+    }
+
     g[g == ""] = NA
     g
   })
@@ -145,7 +164,7 @@ server = function(input, output, session) {
                      "3" = input$p3, "4" = 1-input$p1-input$p2-input$p3))
 
   observeEvent(afreq(), {
-    if(debug) message("afreq-4")
+    if(debug) message("update p4 field")
     updateNumericInput(session, "p4", value = afreq()[["4"]])
   })
 
@@ -165,7 +184,8 @@ server = function(input, output, session) {
 
   observeEvent(input$updatePeds, {
     if(debug) message("update")
-    newpeds = tryCatch(peds() |> setGenos(genodat()), error = errModal)
+    gt = genodat()
+    newpeds = tryCatch(peds() |> setGenos(gt), error = errModal)
     peds(req(newpeds))
   })
 
@@ -189,16 +209,26 @@ server = function(input, output, session) {
     if(abs(input$cm - cm) > sqrt(.Machine$double.eps))
       updateNumericInput(session, "cm", value = cm)
   })
+
   observeEvent(req(input$cm), {
     rho = req(haldane(cM = input$cm))
     if(abs(input$rho - rho) > sqrt(.Machine$double.eps))
       updateNumericInput(session, "rho", value = rho)
   })
 
-  LRdat = reactiveVal(NULL)
+  observeEvent(input$variable, {
+    if(debug) message("disable/enable")
 
-  observeEvent({input$compute; input$variable; input$npoints}, {
-    if(debug) message("compute")
+    disab = switch(input$variable, dist =, rho = c("cm", "rho"), mutrate = "mrate", freq = "p1")
+    enab = setdiff(c("cm", "rho", "mrate", "p1"), disab)
+
+    for(w in disab) shinyjs::disable(w)
+    for(w in enab)  shinyjs::enable(w)
+  })
+
+  # Main data reactive
+  LRdat = reactive({
+    if(debug) message("LRdat")
 
     N = req(input$npoints)
     afr = afreq()
@@ -209,16 +239,19 @@ server = function(input, output, session) {
     err = NULL
     if(N < 3 || N > 100)
       err = "The number of points must be between 3 and 100"
+
     if(any(is.na(afr) | afr < 0 | afr > 1))
       err = "Allele frequencies must be between 0 and 1"
-    if(is.na(mrate) || mrate < 0 || mrate > 1)
+
+    if(input$variable != "mrate" && (is.na(mrate) || mrate < 0 || mrate > 1))
       err = "The mutation rate must be between 0 and 1"
-    if(is.na(rho) || rho < 0 || rho > 0.5)
+
+    if(!input$variable %in% c("dist", "rho") && (is.na(rho) || rho < 0 || rho > 0.5))
       err = "The recombination rate must be between 0 and 0.5"
 
     if(!is.null(err)) {
       errModal(err)
-      return()
+      req(FALSE)
     }
 
     peds = tryCatch(error = errModal, warning = errModal,
@@ -226,13 +259,11 @@ server = function(input, output, session) {
         p |> setAfreq12(afr) |> setMutmod(model = "equal", rate = mrate)))
     req(peds)
 
-    lik2 = function(ped, r = rho) {
-      likelihood2(ped, 1, 2, rho = r)
-    }
+    # Wrappers
+    lik2 = function(ped, r = rho) likelihood2(ped, 1, 2, rho = r)
+    setFr1 = function(a)  c("1" = a, afr[2:3], "4" = 1 - a - sum(afr[2:3]))
 
-    setFr1 = function(a)
-      c("1" = a, afr[2:3], "4" = 1 - a - sum(afr[2:3]))
-
+    # Compute likelihoods
     dat = switch(input$variable,
       dist = tibble(
         x = seq(0, 200, length = N),
@@ -250,14 +281,14 @@ server = function(input, output, session) {
         lik2 = sapply(x, function(mutr) peds[[2]] |> setMutmod(rate = mutr, update = T) |> lik2()),
       ),
       freq = tibble(
-        x = seq(0.001, 1-0.001-sum(afr[2:3]), length = N),
+        x = seq(0.0001, 1-0.0001-sum(afr[2:3]), length = N),
         lik1 = sapply(x, function(a) peds[[1]] |> setAfreq12(setFr1(a)) |> lik2()),
         lik2 = sapply(x, function(a) peds[[2]] |> setAfreq12(setFr1(a)) |> lik2()),
       )
     )
 
     dat$LR = dat$lik1/dat$lik2
-    LRdat(dat)
+    dat
   })
 
   output$pedplot1 = renderPlot({
@@ -276,34 +307,55 @@ server = function(input, output, session) {
   })
 
 
-  output$graphs = renderPlot({
-    if(debug) message("graph")
-
+  output$graph1 = renderPlotly({
+    if(debug) message("graph1")
     dat = req(LRdat())
     xlab = names(VARIABLES)[match(input$variable, VARIABLES)]
 
+    # Hack to avoid max tick at 0.9.
+    # (When max LR is around 1.05, default ticks are 0,.3,.6,.9,1.2; 1.2 not shown)
+    brks = function(lims) {
+      b = scales::extended_breaks()(lims)
+      if(max(b) < 1.21)
+        b = c(0, 0.25, 0.5, 0.75, 1)
+      b
+    }
+
     p1 = ggplot(dat, aes(x, LR)) +
-      theme_classic(base_size = 16) +
-      geom_line() +
-      labs(x = xlab, y = "LR", title = "LR vs. variable") +
-      lims(y = c(0, max(1, dat$LR))) +
-      theme(plot.margin = margin(b = 10))
+      theme_classic(base_size = 14) +
+      geom_line() + geom_point(size = 0.8) +
+      labs(x = xlab, y = "LR") +
+      scale_y_continuous(limits = c(0, max(1, max(dat$LR))),
+                         breaks = brks, expand = expansion(mult = c(0, 0.08)))
 
+    ggplotly(p1, tooltip = "y") |> plotly::config(displayModeBar = FALSE)
+  })
 
+  output$graph2 = renderPlotly({
+    if(debug) message("graph1")
+    dat = req(LRdat())
     likdat = rbind(data.frame(x = dat$x, lik = dat$lik1, Ped = "Ped 1"),
                    data.frame(x = dat$x, lik = dat$lik2, Ped = "Ped 2"))
+    likdat$text = paste("Likelihood:", likdat$x)
 
-    p2 = ggplot(likdat, aes(x, lik, col = as.factor(Ped))) +
-      theme_classic(base_size = 16) +
-      geom_line() +
-      labs(x = xlab, y = "Likelihood", col = NULL,  title = "Likelihood vs. variable") +
-      scale_colour_manual(values = c("blue", "red")) +
-      lims(y = c(0, NA)) +
-      theme(legend.key.width = unit(1, "cm"),
-            plot.margin = margin(t = 10))
+    xlab = names(VARIABLES)[match(input$variable, VARIABLES)]
 
-    p1 / p2
-  }, execOnResize = TRUE)
+    p2 = ggplot(likdat, aes(x, y = lik, col = as.factor(Ped), group = Ped,
+                            text = paste0("x: ", sprintf("%.3g", x), "<br>y: ", sprintf("%.4g", lik)))) +
+      theme_classic(base_size = 14) +
+      geom_line() + geom_point(size = 0.8) +
+      labs(x = xlab, y = "Likelihood", col = NULL) +
+      scale_y_continuous(limits = c(0, NA),
+                         expand = expansion(mult = c(0, 0.08))) +
+      scale_colour_manual(values = c("blue", "red"))
+
+    ggplotly(p2, tooltip = "text") |>
+      plotly::config(displayModeBar = FALSE) |>
+      plotly::layout(
+        legend = list(orientation = "h", x = 1, xanchor = "right", y = 1.09,
+                      yanchor = "center", bgcolor = "transparent"),
+        showlegend = TRUE)
+  })
 
 }
 

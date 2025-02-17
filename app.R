@@ -34,7 +34,7 @@ VARIABLES = c(
   "Mutation rate" = "mutrate",
   "Frequency of '1' allele" = "freq")
 
-debug = T
+debug = FALSE
 
 
 
@@ -52,9 +52,13 @@ ui = fluidPage(
 
   # Application title
   titlePanel(
-    title = HTML("<b>Linkage Lab:</b> Exploring kinship LR with linked markers"),
-    windowTitle = "LinkageLab"),
+    title = HTML("<b>Linkage Lab:</b> Kinship LR with linked markers"),
+    windowTitle = "Linkage Lab"),
 
+  div(style = "margin-top:-5px; margin-bottom: 5px;",
+      HTML('<b>A pedagogical tool for exploring the effect of linkage in kinship testing.
+           Built on the <a href="https://magnusdv.github.io/pedsuite/" target="_blank">pedsuite</a>.
+           Source code: <a href="https://github.com/magnusdv/linkageLab" target="_blank">GitHub</a>.</b>')),
 
   sidebarLayout(
     sidebarPanel(width = 3, #style = "max-width:400px;",
@@ -90,12 +94,12 @@ ui = fluidPage(
       h4("Frequencies"),
       tags$div(class = "inline",
         fluidRow(
-          column(6, numericInput("p1", label = "1:", value = 0.1, min = 0, max = 1, step = 0.1, width = "100%")),
-          column(6, numericInput("p2", label = "2:", value = 0.2, min = 0, max = 1, step = 0.1, width = "100%")),
+          column(6, numericInput("p1", label = "1:", value = 0.1, min = 0, max = 1, step = 0.05, width = "100%")),
+          column(6, numericInput("p2", label = "2:", value = 0.2, min = 0, max = 1, step = 0.05, width = "100%")),
         ),
         fluidRow(
-          column(6, numericInput("p3", label = "3:", value = 0.3, min = 0, max = 1, step = 0.1, width = "100%")),
-          column(6, numericInput("p4", label = "4:", value = 0.4, min = 0, max = 1, step = 0.1, width = "100%")),
+          column(6, numericInput("p3", label = "3:", value = 0.3, min = 0, max = 1, step = 0.05, width = "100%")),
+          column(6, numericInput("p4", label = "4:", value = 0.4, min = 0, max = 1, step = 0.05, width = "100%")),
         ),
       ),
 

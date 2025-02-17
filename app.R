@@ -5,9 +5,7 @@ suppressMessages(suppressPackageStartupMessages({
   library(pedprobr)
   library(forrel)
   library(tibble)
-  library(ggplot2)
-  library(patchwork)
-  library(tidyr)
+  #library(ggplot2)
   library(plotly)
 }))
 
@@ -48,6 +46,8 @@ ui = fluidPage(
   .form-control {padding: 3px 1px 3px 8px; height: auto; margin-top:1px; margin-bottom:1px;}
   #variable .form-group {margin-bottom: 0px; white-space: nowrap;}
   #lastrow .form-group {margin-bottom: 0px}
+  @media (min-width: 1200px) { /* Adjust for large screens */
+      .sidebar { max-width: 280px; }
   "))),
 
   # Application title
@@ -55,13 +55,13 @@ ui = fluidPage(
     title = HTML("<b>Linkage Lab:</b> Kinship LR with linked markers"),
     windowTitle = "Linkage Lab"),
 
-  div(style = "margin-top:-5px; margin-bottom: 5px;",
+  div(style = "margin-top:-5px; margin-bottom: 8px;",
       HTML('<b>A pedagogical tool for exploring the effect of linkage in kinship testing.
            Built on the <a href="https://magnusdv.github.io/pedsuite/" target="_blank">pedsuite</a>.
            Source code: <a href="https://github.com/magnusdv/linkageLab" target="_blank">GitHub</a>.</b>')),
 
   sidebarLayout(
-    sidebarPanel(width = 3, #style = "max-width:400px;",
+    sidebarPanel(width = 2, style = "min-width:200px;", class = "sidebar",
       selectInput("comp", label = "Comparison", choices = CASES, selected = "Sibs : halfsibs"),
 
       HR,
@@ -116,12 +116,11 @@ ui = fluidPage(
                style = "margin-bottom: 10px"),
       fluidRow(id = "lastrow",
         column(6, numericInput("npoints", "Points", value = 11, min = 5, max = 50, step = 1)),
-        #column(6, actionButton("compute", "Plot!", class = "btn-primary", width = "100%",
-        #                       style = "margin-top: 15px; font-size: 150%")),
-      )
+      ),
+
 ),
     # Plots
-    mainPanel(width = 9, align = "left",
+    mainPanel(width = 10,
       fluidRow(
         column(width = 5, align = "left", style = "max-width:400px",
           plotOutput("pedplot1", height = "325px"),

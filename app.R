@@ -5,7 +5,6 @@ suppressMessages(suppressPackageStartupMessages({
   library(pedprobr)
   library(forrel)
   library(tibble)
-  #library(ggplot2)
   library(plotly)
 }))
 
@@ -42,12 +41,13 @@ ui = fluidPage(
   tags$head(tags$style(HTML("
   .well {margin-bottom: 6px; padding: 15px}
   .inline label{ display: table-cell; padding-right:3px; white-space: nowrap;}
-  .inline .form-group { display: table-row;}
+  .inline .form-group { display: table-row}
   .form-control {padding: 3px 1px 3px 8px; height: auto; margin-top:1px; margin-bottom:1px;}
   #variable .form-group {margin-bottom: 0px; white-space: nowrap;}
-  #lastrow .form-group {margin-bottom: 0px}
+  #lastrow .form-group {margin-bottom: 7px}
   @media (min-width: 1200px) { /* Adjust for large screens */
       .sidebar { max-width: 280px; }
+  }
   "))),
 
   # Application title
@@ -62,13 +62,12 @@ ui = fluidPage(
 
   sidebarLayout(
     sidebarPanel(width = 2, style = "min-width:200px;", class = "sidebar",
-      selectInput("comp", label = "Comparison", choices = CASES, selected = "Sibs : halfsibs"),
-
-      HR,
+      h4("Comparison", style = "margin-top: 2px"),
+                 selectInput("comp", label = NULL, choices = CASES, selected = "Sibs : halfsibs"),
 
       fluidRow(
-        column(8, h4("Genotypes", style = "margin-top: 4px")),
-        column(4, actionButton("sim", "Simulate", style = "float:right; padding:2px 10px",
+        column(8, h4("Genotypes", style = "margin-top: 6px")),
+        column(4, actionButton("sim", "Simulate", style = "float:right; padding:2px 10px; margin-top: 2px",
                                class = "btn-sm btn-warning")),
       ),
       tags$div(class = "inline",
@@ -87,11 +86,11 @@ ui = fluidPage(
         )),
       )),
 
-      actionButton("updatePeds", "Update pedigrees", style = "padding: 2px; margin-top:5px",
+      actionButton("updatePeds", "Update", style = "padding: 2px; margin-top:5px",
                    width = "100%", class = "btn-success"),
       HR,
 
-      h4("Frequencies"),
+      h5("Allele frequencies", style = "font-weight:bold;"),
       tags$div(class = "inline",
         fluidRow(
           column(6, numericInput("p1", label = "1:", value = 0.1, min = 0, max = 1, step = 0.05, width = "100%")),

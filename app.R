@@ -56,7 +56,7 @@ ui = fluidPage(
     windowTitle = "Linkage Lab"),
 
   div(style = "margin-top:-5px; margin-bottom: 8px;",
-      HTML('<b>A pedagogical tool for exploring the effect of linkage in kinship testing.
+      HTML('<b>A tool for exploring the effect of linkage in kinship testing.
            Built on the <a href="https://magnusdv.github.io/pedsuite/" target="_blank">pedsuite</a>.
            Source code: <a href="https://github.com/magnusdv/linkageLab" target="_blank">GitHub</a>.</b>')),
 
@@ -365,4 +365,6 @@ server = function(input, output, session) {
 
 
 # Run the application
-shinyApp(ui = ui, server = server, options = list(launch.browser = TRUE))
+suppressMessages(suppressPackageStartupMessages(
+  shinyApp(ui = ui, server = server, options = list(launch.browser = TRUE))
+))

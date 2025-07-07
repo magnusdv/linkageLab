@@ -1,4 +1,4 @@
-library(pedtools)
+
 IDS = c("A", "B")
 
 stop2 = function (...) {
@@ -78,11 +78,3 @@ niceplot = function(ped, title = NULL, fillcol = NULL, cex = 1.4, addbox = TRUE,
 
 HR = hr(style = "border-top: 1px solid #BBBBBB; margin: 14px 0px 12px 0px")
 
-
-builtinPeds = list(
-  duo = nuclearPed(father = IDS[1], children = IDS[2]),
-  unrelated = list(pedtools::singleton(IDS[1]), pedtools::singleton(IDS[2])),
-  sibs = nuclearPed(children = IDS),
-  `half-sibs` = halfSibPed() |> relabel(old = 4:5, new = IDS),
-  uncle = avuncularPed() |> relabel(old = c(3,6), new = IDS),
-  grandparent = linearPed(2) |> relabel(old = c(1,5), new = IDS))

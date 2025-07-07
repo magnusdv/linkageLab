@@ -8,6 +8,17 @@ suppressMessages(suppressPackageStartupMessages({
   library(plotly)
 }))
 
+IDS = c("A", "B")
+
+builtinPeds = list(
+  duo = nuclearPed(father = IDS[1], children = IDS[2]),
+  unrelated = list(pedtools::singleton(IDS[1]), pedtools::singleton(IDS[2])),
+  sibs = nuclearPed(children = IDS),
+  `half-sibs` = halfSibPed() |> relabel(old = 4:5, new = IDS),
+  uncle = avuncularPed() |> relabel(old = c(3,6), new = IDS),
+  grandparent = linearPed(2) |> relabel(old = c(1,5), new = IDS)
+)
+
 CASES = c("Duo : unrelated",
           "Sibs : unrelated",
           "Half-sibs : unrelated",
@@ -17,8 +28,6 @@ CASES = c("Duo : unrelated",
           "Grandparent : half-sibs",
           "Uncle : half-sibs")
 names(CASES) = CASES
-
-IDS = c("A", "B")
 
 PEDS = lapply(CASES, function(case) {
   rels = strsplit(case, " : ")[[1]]
@@ -33,6 +42,9 @@ VARIABLES = c(
 
 debug = FALSE
 
+
+
+# UI ----------------------------------------------------------------------
 
 
 ui = fluidPage(
@@ -137,6 +149,10 @@ ui = fluidPage(
 )
 
 
+
+# Server function ---------------------------------------------------------
+
+
 server = function(input, output, session) {
 
   genodat = reactive({
@@ -208,14 +224,14 @@ server = function(input, output, session) {
 
   observeEvent(req(input$rho), {
     cm = suppressWarnings(haldane(rho = input$rho))
-    if(cm < 0) cm = NA
+    if(!is.na(cm) && cm < 0) cm = NA
     if(is.na(cm) || is.na(input$cm) || abs(input$cm - cm) > sqrt(.Machine$double.eps))
       updateNumericInput(session, "cm", value = cm)
   })
 
   observeEvent(req(input$cm), {
     rho = suppressWarnings(haldane(cM = input$cm))
-    if(rho < 0) rho = NA
+    if(!is.na(rho) && rho < 0) rho = NA
     if(is.na(rho) || is.na(input$rho) || abs(input$rho - rho) > sqrt(.Machine$double.eps))
       updateNumericInput(session, "rho", value = rho)
   })

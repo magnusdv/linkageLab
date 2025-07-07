@@ -106,7 +106,7 @@ ui = fluidPage(
 
       tags$div(class = "inline",
         numericInput("cm",    "Dist (cm):", value = 0, step = 1, min = 0, width = "100%"),
-        numericInput("rho",   "Rec. rate:", value = 0, step = 0.01, min = 0, max = 1, width = "100%"),
+        numericInput("rho",   "Rec. rate:", value = 0, step = 0.01, min = 0, max = 0.5, width = "100%"),
         numericInput("mrate", "Mut. rate:", value = 0, step = 0.01, min = 0, max = 1, width = "100%")
       ),
 
@@ -207,14 +207,16 @@ server = function(input, output, session) {
   })
 
   observeEvent(req(input$rho), {
-    cm = req(haldane(rho = input$rho))
-    if(abs(input$cm - cm) > sqrt(.Machine$double.eps))
+    cm = suppressWarnings(haldane(rho = input$rho))
+    if(cm < 0) cm = NA
+    if(is.na(cm) || is.na(input$cm) || abs(input$cm - cm) > sqrt(.Machine$double.eps))
       updateNumericInput(session, "cm", value = cm)
   })
 
   observeEvent(req(input$cm), {
-    rho = req(haldane(cM = input$cm))
-    if(abs(input$rho - rho) > sqrt(.Machine$double.eps))
+    rho = suppressWarnings(haldane(cM = input$cm))
+    if(rho < 0) rho = NA
+    if(is.na(rho) || is.na(input$rho) || abs(input$rho - rho) > sqrt(.Machine$double.eps))
       updateNumericInput(session, "rho", value = rho)
   })
 

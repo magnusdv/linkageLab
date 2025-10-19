@@ -26,6 +26,8 @@ CASES = c("Duo : unrelated",
           "Sibs : unrelated",
           "Half-sibs : unrelated",
           "Grandparent : unrelated",
+          "Uncle : unrelated",
+          "Duo : sibs",
           "Sibs : half-sibs",
           "Grandparent : uncle",
           "Grandparent : half-sibs",
@@ -78,7 +80,7 @@ ui = fluidPage(
   sidebarLayout(
     sidebarPanel(width = 2, style = "min-width:200px;", class = "sidebar",
       h4("Comparison", style = "margin-top: 2px"),
-                 selectInput("comp", label = NULL, choices = CASES, selected = "Sibs : halfsibs"),
+      selectInput("comp", label = NULL, choices = CASES, selected = "Sibs : half-sibs"),
 
       fluidRow(
         column(8, h4("Genotypes", style = "margin-top: 6px")),

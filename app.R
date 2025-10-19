@@ -8,11 +8,14 @@ suppressMessages(suppressPackageStartupMessages({
   library(plotly)
 }))
 
+# Deployment commands:
+# remotes::install_github("magnusdv/pedtools")
+
 IDS = c("A", "B")
 
 builtinPeds = list(
   duo = nuclearPed(father = IDS[1], children = IDS[2]),
-  unrelated = list(pedtools::singleton(IDS[1]), pedtools::singleton(IDS[2])),
+  unrelated = pedtools::singletons(IDS),
   sibs = nuclearPed(children = IDS),
   `half-sibs` = halfSibPed() |> relabel(old = 4:5, new = IDS),
   uncle = avuncularPed() |> relabel(old = c(3,6), new = IDS),
@@ -49,7 +52,7 @@ debug = FALSE
 
 ui = fluidPage(
   useShinyjs(),
-
+  tags$head(includeHTML("GA.html")),
   tags$head(tags$style(HTML("
   .well {margin-bottom: 6px; padding: 15px}
   .inline label{ display: table-cell; padding-right:3px; white-space: nowrap;}
@@ -64,11 +67,11 @@ ui = fluidPage(
 
   # Application title
   titlePanel(
-    title = HTML("<b>Linkage Lab:</b> Kinship LR with linked markers"),
+    title = HTML("<b>Linkage Lab:</b> Kinship testing with linked markers"),
     windowTitle = "Linkage Lab"),
 
   div(style = "margin-top:-5px; margin-bottom: 8px;",
-      HTML('<b>A tool for exploring the effect of linkage in kinship testing.
+      HTML('<b>A tool for exploring how linkage affects the LR in kinship testing.
            Built on the <a href="https://magnusdv.github.io/pedsuite/" target="_blank">pedsuite</a>.
            Source code: <a href="https://github.com/magnusdv/linkageLab" target="_blank">GitHub</a>.</b>')),
 

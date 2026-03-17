@@ -22,16 +22,16 @@ The app is built on the
 
 ## Comparisons included
 
-- Duo – Unrelated  
-- Sibs – Unrelated  
-- Half sibs – Unrelated  
-- Grandparent – Unrelated
-- Avuncular – Unrelated
-- Duo – Sibs
-- Sibs – Half sibs  
-- Grandparent – Half sibs  
-- Avuncular – Half sibs
-- Grandparent – Avuncular
+- Paternity – unrelated
+- Paternity – siblings
+- Siblings – unrelated
+- Siblings – half-siblings
+- Half-siblings – unrelated
+- Half-siblings – grandparent
+- Half-siblings – avuncular
+- Grandparent – unrelated
+- Grandparent – avuncular
+- Avuncular – unrelated
 
 ## Live app
 

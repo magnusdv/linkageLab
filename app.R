@@ -14,24 +14,25 @@ suppressMessages(suppressPackageStartupMessages({
 IDS = c("A", "B")
 
 builtinPeds = list(
-  duo = nuclearPed(father = IDS[1], children = IDS[2]),
+  paternity = nuclearPed(father = IDS[1], children = IDS[2]),
   unrelated = pedtools::singletons(IDS),
   sibs = nuclearPed(children = IDS),
   `half-sibs` = halfSibPed() |> relabel(old = 4:5, new = IDS),
-  uncle = avuncularPed() |> relabel(old = c(3,6), new = IDS),
+  avuncular = avuncularPed() |> relabel(old = c(3,6), new = IDS),
   grandparent = linearPed(2) |> relabel(old = c(1,5), new = IDS)
 )
 
-CASES = c("Duo : unrelated",
+CASES = c("Paternity : unrelated",
+          "Paternity : sibs",
           "Sibs : unrelated",
-          "Half-sibs : unrelated",
-          "Grandparent : unrelated",
-          "Uncle : unrelated",
-          "Duo : sibs",
           "Sibs : half-sibs",
-          "Grandparent : uncle",
-          "Grandparent : half-sibs",
-          "Uncle : half-sibs")
+          "Half-sibs : unrelated",
+          "Half-sibs : grandparent",
+          "Half-sibs : avuncular",
+          "Grandparent : unrelated",
+          "Grandparent : avuncular",
+          "Avuncular : unrelated")
+
 names(CASES) = CASES
 
 PEDS = lapply(CASES, function(case) {

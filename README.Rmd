@@ -7,31 +7,32 @@ output: github_document
 
 ## Overview
 
-Linkage Lab is an interactive Shiny app for exploring how genetic linkage between markers 
-affects likelihood ratios (LR) in kinship testing.  
+Linkage Lab is a free interactive Shiny app for exploring how genetic linkage between markers affects likelihood ratios (LR) in forensic kinship testing.
 
-For a given pedigree comparison the app shows how the LR for a pair of markers is influenced by:
+For a given relationship comparison, the app shows how the LR for a marker pair depends on:
 
 - the observed genotypes
-- recombination rate between the markers
+- the recombination rate between the markers
 - the allele frequencies
 - the mutation rate
 
-The app is built on the [pedsuite](https://magnusdv.github.io/pedsuite/).
+<img src="img/screenshot.png" alt="Screenshot of the Linkage Lab app" width="800">
+
+The app is built on the [pedsuite](https://magnusdv.github.io/pedsuite/) packages for pedigree analysis in R.
 
 ## Comparisons included
 
-- Paternity -- unrelated
-- Paternity -- siblings
-- Siblings -- unrelated
-- Siblings -- half-siblings
-- Half-siblings -- unrelated
-- Half-siblings -- grandparent
-- Half-siblings -- avuncular
-- Grandparent -- unrelated
-- Grandparent -- avuncular
-- Avuncular -- unrelated
+- Paternity vs unrelated
+- Paternity vs siblings
+- Siblings vs unrelated
+- Siblings vs half-siblings
+- Half-siblings vs unrelated
+- Half-siblings vs grandparent
+- Half-siblings vs avuncular
+- Grandparent vs unrelated
+- Grandparent vs avuncular
+- Avuncular vs unrelated
 
 ## Live app
 
-**Link:** <https://magnusdv.shinyapps.io/linkagelab/>
+<https://magnusdv.shinyapps.io/linkagelab/>

@@ -26,34 +26,17 @@ addMarkers = function(x) {
   x |> addMarker(name = "M1", alleles = 1:4) |> addMarker(name = "M2", alleles = 1:4)
 }
 
-fix2 = function(smat) {
-  mode(smat) = "character"
 
-  # Entries with exactly two characters
-  ch2 = !is.na(smat) & nchar(smat) == 2
-  if(!any(ch2))
-    return(smat)
-
-  smat[ch2] = sapply(smat[ch2], function(s) {
-    ss = strsplit(s, "")[[1]]
-    if("/" %in% ss)
-      ss[ss == "/"] = "-"
-    paste0(ss[1], "/", ss[2])
-  })
-  smat
-}
-
-# Set genotypes for both peds
-setGenos = function(peds, genodat) {
+# Set allele matrix (i.e. genotypes) for both peds
+setAmat = function(peds, amat) {
   lapply(peds, function(p)
-    setMarkers(p, alleleMatrix = genodat, sep = "/",
-               locusAttributes = list(alleles = 1:4)))
+    setMarkers(p, alleleMatrix = amat, locusAttributes = list(alleles = 1:4)))
 }
 
 # Set frequencies for marker 1 and 2
-setAfreq12 = function(ped, afr)
-  ped |> setAfreq(marker = 1, afreq = afr) |> setAfreq(marker = 2, afreq = afr)
-
+setAfreq12 = function(ped, afr1, afr2) {
+  ped |> setAfreq(marker = 1, afreq = afr1) |> setAfreq(marker = 2, afreq = afr2)
+}
 
 ibsState = function(gt1, gt2) {
   max(sum(gt1[1] == gt2[1], gt1[2] == gt2[2], na.rm = TRUE),
@@ -76,5 +59,36 @@ niceplot = function(ped, title = NULL, fillcol = NULL, cex = 1.4, addbox = TRUE,
   if(addbox) box("outer")
 }
 
+
+# UI utils ------------------------------------------------------------------------------------
+
+
 HR = hr(style = "border-top: 1px solid #BBBBBB; margin: 14px 0px 12px 0px")
 
+alleleInput = function(id, value = "") {
+  textInput(id, label = NULL, value = value, width = "100%")
+}
+
+alleleRow = function(marker, ids, vals) {
+  tagList(
+    tags$div(class = "rowname", marker),
+    tags$div(class = "allele-cell", alleleInput(ids[1], vals[1])),
+    tags$div(class = "allele-cell", alleleInput(ids[2], vals[2])),
+    tags$div(class = "allele-cell", alleleInput(ids[3], vals[3])),
+    tags$div(class = "allele-cell", alleleInput(ids[4], vals[4]))
+  )
+}
+
+afInput = function(id, value) {
+  numericInput(id, label = NULL, value = value, min = 0, max = 1, step = "any", width = "100%")
+}
+
+afRow = function(marker, ids, vals) {
+  tagList(
+    tags$div(class = "rowname", marker),
+    tags$div(class = "afreq-cell", afInput(ids[1], vals[1])),
+    tags$div(class = "afreq-cell", afInput(ids[2], vals[2])),
+    tags$div(class = "afreq-cell", afInput(ids[3], vals[3])),
+    tags$div(class = "afreq-cell", afInput(ids[4], vals[4]))
+  )
+}

@@ -11,6 +11,17 @@ suppressMessages(suppressPackageStartupMessages({
 # Deployment commands:
 # remotes::install_github("magnusdv/pedtools")
 
+debug = F
+prefill = F
+
+# Prefill values for paper example
+prefill_vals = list(
+  amat = rbind(A = c(1,1,1,2), B = c(1,1,1,3)),
+  fr1 = c(norSTR::norwayDB$vWA["16"], 0, 0),
+  fr2 = norSTR::norwayDB$D12S391[c("18", "21", "22")]
+)
+
+
 IDS = c("A", "B")
 
 builtinPeds = list(
@@ -40,14 +51,9 @@ PEDS = lapply(CASES, function(case) {
   setNames(builtinPeds[tolower(rels)], c("Ped 1", "Ped 2"))
 })
 
-VARIABLES = c(
-  "Distance (centiMorgan)" = "dist",
-  "Recombination rate" = "rho",
-  "Mutation rate" = "mutrate",
-  "Frequency of '1' allele" = "freq")
-
-debug = FALSE
-
+VARIABLES = c("Distance (cM)" = "dist",
+              "Recombination rate" = "rho",
+              "Mutation rate" = "mutrate")
 
 
 # UI ----------------------------------------------------------------------
@@ -57,16 +63,43 @@ ui = fluidPage(
   useShinyjs(),
   tags$head(includeHTML("GA.html")),
   tags$head(tags$style(HTML("
-  .well {margin-bottom: 6px; padding: 15px}
-  .inline label{ display: table-cell; padding-right:3px; white-space: nowrap;}
-  .inline .form-group { display: table-row}
-  .form-control {padding: 3px 1px 3px 8px; height: auto; margin-top:1px; margin-bottom:1px;}
-  #variable .form-group {margin-bottom: 0px; white-space: nowrap;}
-  #lastrow .form-group {margin-bottom: 7px}
-  @media (min-width: 1200px) { /* Adjust for large screens */
-      .sidebar { max-width: 280px; }
-  }
+  .well{margin-bottom:6px;padding:15px}
+
+  .selectize-dropdown .option {padding:2px 10px; line-height:1.2; white-space:nowrap}
+  .selectize-dropdown-content {max-height: none;}
+
+  .inline .form-group{display:table-row;margin-bottom:0}
+  .inline label{display:table-cell;padding-right:3px;white-space:nowrap}
+  .inline .form-control{padding:3px 1px 3px 8px;height:auto;margin:1px 0}
+
+  #variable .form-group{margin-bottom:0}
+  #lastrow .form-group{margin-bottom:7px}
+
+  @media (min-width:1200px){.sidebar{max-width:280px}}
+
+  #updatePeds{position:relative;transition:box-shadow .2s ease,filter .2s ease,opacity .2s ease}
+  #updatePeds:disabled{opacity:.55;filter:saturate(.6);box-shadow:none}
+  #updatePeds.dirty{animation:updatePulse 1.3s ease-in-out infinite;box-shadow:0 0 0 .25rem rgba(91,192,222,.30)}
+  #updatePeds.dirty::after{content:'';position:absolute;top:8px;right:10px;width:10px;height:10px;border-radius:50%;background:rgb(220,53,69);box-shadow:0 0 0 4px rgba(220,53,69,.18)}
+  @keyframes updatePulse{0%{box-shadow:0 0 0 .10rem rgba(91,192,222,.12)}50%{box-shadow:0 0 0 .35rem rgba(91,192,222,.30)}100%{box-shadow:0 0 0 .10rem rgba(91,192,222,.12)}}
+
+  .cellgrid{display:grid;grid-template-columns:20px repeat(4,1fr);column-gap:1px;align-items:center}
+  .cellgrid .colname{font-size:13px;font-weight:600;text-align:center;margin:0;padding:0}
+  .cellgrid .rowname{font-size:13px;font-weight:600;text-align:left;margin:0;padding:0 2px 0 0}
+  .cellgrid .form-group{margin:0}
+  .cellgrid .form-control{padding:2px 3px;height:auto;margin:0;text-align:center}
+  .afreq-cell .form-control{font-style:italic}
+
+  .cellgrid input[type=number]{-moz-appearance:textfield}
+  .cellgrid input[type=number]::-webkit-outer-spin-button,
+  .cellgrid input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   "))),
+
+  tags$script(HTML("
+  $(document).on('shown.bs.modal', '#shiny-modal', function() {
+    $(this).find('.modal-footer button').trigger('focus');
+  });
+  ")),
 
   # Application title
   titlePanel(
@@ -88,44 +121,36 @@ ui = fluidPage(
         column(4, actionButton("sim", "Simulate", style = "float:right; padding:2px 10px; margin-top: 2px",
                                class = "btn-sm btn-warning")),
       ),
-      tags$div(class = "inline",
-      fluidRow(
-        column(6, style = "padding-right: 5px", wellPanel(
-          style = "padding: 5px; border-color: silver;",
-          p("A", style = "font-size: 18px; text-align: center; margin-bottom:0px"),
-          textInput("A1", "M1:", width = "100%"),
-          textInput("A2", "M2:", width = "100%")
-        )),
-        column(6, style = "padding-left: 5px", wellPanel(
-          style = "padding: 5px; border-color: silver;",
-          p("B", style = "font-size: 18px; text-align: center; margin-bottom:0px"),
-          textInput("B1", "M1:", width = "100%"),
-          textInput("B2", "M2:", width = "100%")
-        )),
-      )),
 
-      actionButton("updatePeds", "Update", style = "padding: 2px; margin-top:5px",
-                   width = "100%", class = "btn-success"),
-      HR,
-
-      h5("Allele frequencies", style = "font-weight:bold;"),
-      tags$div(class = "inline",
-        fluidRow(
-          column(6, numericInput("p1", label = "1:", value = 0.1, min = 0, max = 1, step = 0.05, width = "100%")),
-          column(6, numericInput("p2", label = "2:", value = 0.2, min = 0, max = 1, step = 0.05, width = "100%")),
-        ),
-        fluidRow(
-          column(6, numericInput("p3", label = "3:", value = 0.3, min = 0, max = 1, step = 0.05, width = "100%")),
-          column(6, numericInput("p4", label = "4:", value = 0.4, min = 0, max = 1, step = 0.05, width = "100%")),
-        ),
+      tags$div(class = "cellgrid",
+        tags$div(), tags$div(class = "colname", "A1"), tags$div(class = "colname", "A2"),
+                    tags$div(class = "colname", "B1"), tags$div(class = "colname", "B2"),
+        alleleRow("M1", ids = paste0("m1_", c("A1", "A2", "B1", "B2")), vals = rep("", 4)),
+        alleleRow("M2", ids = paste0("m2_", c("A1", "A2", "B1", "B2")), vals = rep("", 4))
       ),
 
+      h4("Allele frequencies", style = "margin-top:14px; margin-bottom:6px;"),
+      tags$div(class = "cellgrid",
+        tags$div(), tags$div(class = "colname", "1"), tags$div(class = "colname", "2"),
+                    tags$div(class = "colname", "3"), tags$div(class = "colname", "4"),
+        afRow("M1", ids = paste0("m1_p", 1:4), vals = c(0.1, 0.2, 0.3, 0.4)),
+        afRow("M2", ids = paste0("m2_p", 1:4), vals = c(0.1, 0.2, 0.3, 0.4))
+      ),
+
+      actionButton("updatePeds", "Update", style = "padding: 2px; margin-top:10px",
+                   width = "100%", class = "btn-default"),
       HR,
 
-      tags$div(class = "inline",
-        numericInput("cm",    "Dist (cm):", value = 0, step = 1, min = 0, width = "100%"),
+
+      tags$div(class = "inline", style = "margin-bottom: 5px;",
+        numericInput("cm",    "Dist (cM):", value = 0, step = 1, min = 0, width = "100%"),
         numericInput("rho",   "Rec. rate:", value = 0, step = 0.01, min = 0, max = 0.5, width = "100%"),
-        numericInput("mrate", "Mut. rate:", value = 0, step = 0.01, min = 0, max = 1, width = "100%")
+        numericInput("mrate", "Mut. rate:", value = 0, step = 0.01, min = 0, max = 1, width = "100%"),
+      ),
+
+      tags$div(style = "margin-left: 5px",
+        radioButtons("mapfun", NULL, choices = c("Haldane", "Kosambi"), inline = TRUE, width = "100%",
+                     selected = "Kosambi")
       ),
 
       HR,
@@ -133,6 +158,7 @@ ui = fluidPage(
                style = "margin-bottom: 10px"),
       fluidRow(id = "lastrow",
         column(6, numericInput("npoints", "Points", value = 11, min = 5, max = 50, step = 1)),
+        column(6, numericInput("xmax",    "Max", value = 200))
       ),
 
 ),
@@ -161,159 +187,263 @@ ui = fluidPage(
 
 server = function(input, output, session) {
 
-  genodat = reactive({
-    if(debug) message("genodat")
+  session$onSessionEnded(stopApp)
 
-    g = cbind(M1 = c(A = input$A1, B = input$B1),
-              M2 = c(A = input$A2, B = input$B2))
-    gg = fix2(g)
-    if(!identical(g, gg)) {
-      g = gg
-      isolate({
-        updateTextInput(session, "A1", value = g[["A", "M1"]])
-        updateTextInput(session, "A2", value = g[["A", "M2"]])
-        updateTextInput(session, "B1", value = g[["B", "M1"]])
-        updateTextInput(session, "B2", value = g[["B", "M2"]])
-      })
+  session$onFlushed(function() {
+    if(!prefill) return()
+    if(debug) message("prefill")
+    amat = prefill_vals$amat
+    for(i in 1:2) for(j in 1:2) {
+      updateTextInput(session, sprintf("m%d_A%d", i, j), value = amat[[1, 2*(i-1) + j]])
+      updateTextInput(session, sprintf("m%d_B%d", i, j), value = amat[[2, 2*(i-1) + j]])
     }
+    for(k in 1:3) {
+      updateNumericInput(session, paste0("m1_p", k), value = as.numeric(prefill_vals$fr1[k]))
+      updateNumericInput(session, paste0("m2_p", k), value = as.numeric(prefill_vals$fr2[k]))
+    }
+    shinyjs::delay(200, shinyjs::click("updatePeds"))
+  }, once = TRUE)
 
-    g[g == ""] = NA
-    g
+  amat = reactive({
+    if(debug) message("allele matrix")
+
+    cbind(M1.1 = c(A = input$m1_A1, B = input$m1_B1),
+          M1.2 = c(A = input$m1_A2, B = input$m1_B2),
+          M2.1 = c(A = input$m2_A1, B = input$m2_B1),
+          M2.2 = c(A = input$m2_A2, B = input$m2_B2))
+  })
+  amatEmpty = cbind(M1.1 = c(A = NA, B = NA),
+                    M1.2 = c(A = NA, B = NA),
+                    M2.1 = c(A = NA, B = NA),
+                    M2.2 = c(A = NA, B = NA))
+
+  # Allele frequencies
+  afreq = reactiveValues(afr1 = c(0.1, 0.2, 0.3, 0.4) |> setNames(1:4),
+                         afr2 = c(0.1, 0.2, 0.3, 0.4) |> setNames(1:4))
+
+  # Disable and auto-update p4 fields
+  observe({
+    shinyjs::disable("m1_p4")
+    shinyjs::disable("m2_p4")
   })
 
-  emptydat = cbind(M1 = c(A = NA, B = NA),
-                   M2 = c(A = NA, B = NA))
+  observeEvent(list(input$m1_p1, input$m1_p2, input$m1_p3), {
+    if(debug) message("update m1-p4")
+    s = sum(c(input$m1_p1, input$m1_p2, input$m1_p3), na.rm = TRUE)
+    updateNumericInput(session, "m1_p4", value = 1 - s) #max(0, min(1, 1 - s)))
+  }, ignoreInit = FALSE)
 
-  afreq = reactive(c("1" = input$p1, "2" = input$p2,
-                     "3" = input$p3, "4" = 1-input$p1-input$p2-input$p3))
-
-  observeEvent(afreq(), {
-    if(debug) message("update p4 field")
-    updateNumericInput(session, "p4", value = afreq()[["4"]])
-  })
+  observeEvent(list(input$m2_p1, input$m2_p2, input$m2_p3), {
+    if(debug) message("update m2-p4")
+    s = sum(c(input$m2_p1, input$m2_p2, input$m2_p3), na.rm = TRUE)
+    updateNumericInput(session, "m2_p4", value = 1 - s) #max(0, min(1, 1 - s)))
+  }, ignoreInit = FALSE)
 
   peds = reactiveVal(NULL)
-  peds(isolate(PEDS[[input$comp]] |> setGenos(emptydat)))
+  peds(isolate(PEDS[[input$comp]] |> setAmat(amatEmpty)))
 
   observeEvent(input$comp, {
     if(debug) message("newcomp")
     newpeds = tryCatch(
-      PEDS[[input$comp]] |> setGenos(genodat()),
+      PEDS[[input$comp]] |> setAmat(amat()),
       error = function(e) {
         errModal(e)
-        PEDS[[input$comp]] |> setGenos(emptydat)
+        PEDS[[input$comp]] |> setAmat(amatEmpty)
     })
     peds(newpeds)
   })
 
+
+  # Update pedigrees ------------------------------------------------------
+
+  dirty = reactiveValues(alleles = FALSE, afreqs = FALSE)
+
   observeEvent(input$updatePeds, {
-    if(debug) message("update")
-    gt = genodat()
-    newpeds = tryCatch(peds() |> setGenos(gt), error = errModal)
-    peds(req(newpeds))
+
+    # Update genotypes
+    if(dirty$alleles) {
+      if(debug) message("update genotypes")
+      newpeds = tryCatch(peds() |> setAmat(amat()), error = errModal)
+      peds(req(newpeds))
+    }
+
+    # Update freqs
+    if(dirty$afreqs) {
+      if(debug) message("update afreqs")
+      afreq$afr1 = c("1" = input$m1_p1, "2" = input$m1_p2, "3" = input$m1_p3,
+             "4" = 1 - input$m1_p1 - input$m1_p2 - input$m1_p3)
+      afreq$afr2 = c("1" = input$m2_p1, "2" = input$m2_p2, "3" = input$m2_p3,
+             "4" = 1 - input$m2_p1 - input$m2_p2 - input$m2_p3)
+    }
+    dirty$alleles = dirty$afreqs = FALSE
   })
+
+
+  alleleFields = c("m1_A1","m1_B1","m1_A2","m1_B2","m2_A1","m2_B1","m2_A2","m2_B2")
+  afreqFields = c("m1_p1","m1_p2","m1_p3","m2_p1","m2_p2","m2_p3")
+
+  observeEvent(lapply(alleleFields, function(id) input[[id]]), {dirty$alleles = TRUE}, ignoreInit = TRUE)
+  observeEvent(lapply(afreqFields, function(id) input[[id]]), {dirty$afreqs = TRUE}, ignoreInit = TRUE)
+
+  observeEvent(list(dirty$alleles, dirty$afreqs), {
+    dirt = dirty$alleles || dirty$afreqs
+    if(debug) message("dirty:", dirt)
+    if(dirt) {
+      shinyjs::enable("updatePeds")
+      shinyjs::removeClass("updatePeds", "btn-default")
+      shinyjs::addClass("updatePeds", "btn-info dirty")
+    } else {
+      shinyjs::disable("updatePeds")
+      shinyjs::removeClass("updatePeds", "btn-info dirty")
+      shinyjs::addClass("updatePeds", "btn-default")
+    }
+  }, ignoreInit = FALSE)
 
   observeEvent(input$sim, {
     if(debug) message("sim")
 
-    gt = peds()[[sample(1:2, size = 1)]] |>
+    amatSim = peds()[[sample(1:2, size = 1)]] |>
       markerSim(N = 2, ids = IDS, alleles = 1:4, verbose = FALSE) |>
-      getGenotypes(IDS)
-    colnames(gt) = c("M1", "M2")
+      getAlleles(IDS)
 
-    updateTextInput(session, "A1", value = gt[["A", "M1"]])
-    updateTextInput(session, "A2", value = gt[["A", "M2"]])
-    updateTextInput(session, "B1", value = gt[["B", "M1"]])
-    updateTextInput(session, "B2", value = gt[["B", "M2"]])
-    peds(peds() |> setGenos(gt))
+    colnames(amatSim) = paste0("M", colnames(amatSim))
+
+    for(i in 1:2) for(j in 1:2) {
+      updateTextInput(session, sprintf("m%d_A%d", i, j), value = amatSim[[1, 2*(i-1) + j]])
+      updateTextInput(session, sprintf("m%d_B%d", i, j), value = amatSim[[2, 2*(i-1) + j]])
+    }
+    shinyjs::delay(200, shinyjs::click("updatePeds"))
   })
 
-  observeEvent(req(input$rho), {
-    cm = suppressWarnings(haldane(rho = input$rho))
-    if(!is.na(cm) && cm < 0) cm = NA
-    if(is.na(cm) || is.na(input$cm) || abs(input$cm - cm) > sqrt(.Machine$double.eps))
-      updateNumericInput(session, "cm", value = cm)
-  })
+  # Map function reactive
+  mapfun = reactive(switch(input$mapfun, Haldane = haldane, Kosambi = kosambi))
 
-  observeEvent(req(input$cm), {
-    rho = suppressWarnings(haldane(cM = input$cm))
-    if(!is.na(rho) && rho < 0) rho = NA
-    if(is.na(rho) || is.na(input$rho) || abs(input$rho - rho) > sqrt(.Machine$double.eps))
+  src = reactiveVal(NULL)
+
+  # Update rho when map function or cm changes
+  observeEvent(list(mapfun(), input$cm), {
+    if(identical(src(), "rho")) { src(NULL); return() }
+    rho = suppressWarnings(mapfun()(cM = input$cm))
+    if(!isTRUE(all.equal(input$rho, rho, tolerance = 1e-5))) {
+      if(debug) message("cm -> rho = ", rho)
+      src("cm")
       updateNumericInput(session, "rho", value = rho)
+    }
   })
 
+  # Update cm when rho changes
+  observeEvent(input$rho, {
+    if(identical(src(), "cm")) { src(NULL); return() }
+    cm = suppressWarnings(mapfun()(rho = input$rho))
+    if(!isTRUE(all.equal(input$cm, cm, tolerance = 1e-5))) {
+      if(debug) message("rho -> cm = ", cm)
+      src("rho")
+      updateNumericInput(session, "cm", value = cm)
+    }
+  }, ignoreInit = TRUE)
+
+  # Max when variable changes
   observeEvent(input$variable, {
-    if(debug) message("disable/enable")
-
-    disab = switch(input$variable, dist =, rho = c("cm", "rho"), mutrate = "mrate", freq = "p1")
-    enab = setdiff(c("cm", "rho", "mrate", "p1"), disab)
-
-    for(w in disab) shinyjs::disable(w)
-    for(w in enab)  shinyjs::enable(w)
+    maxval = switch(input$variable,
+      dist = 200,
+      rho = 0.5,
+      mutrate = 1
+    )
+    freezeReactiveValue(input, "xmax")
+    updateNumericInput(session, "xmax", value = maxval)
   })
 
   # Main data reactive
   LRdat = reactive({
     if(debug) message("LRdat")
 
+    variable = input$variable
     N = req(input$npoints)
-    afr = afreq()
-    mrate = input$mrate
-    rho = input$rho
+    xmax = req(input$xmax)
+    afr1 = afreq$afr1
+    afr2 = afreq$afr2
+    mrate0 = input$mrate
+    cm0 = input$cm
+    mapfun = mapfun()
+    rho0 = mapfun(cM = cm0) #isolate(input$rho)
+    cm0 = min(cm0, 200)
+
+    # Include user point?
+    x0 = switch(variable, dist = cm0, rho = rho0, mutrate = mrate0)
+    hasUser = !is.na(x0)
+    addUser = function(v) if(hasUser) unique.default(c(x0, v)) else v
 
     # Checks
     err = NULL
     if(N < 3 || N > 100)
       err = "The number of points must be between 3 and 100"
 
-    if(any(is.na(afr) | afr < 0 | afr > 1))
-      err = "Allele frequencies must be between 0 and 1"
+    if(xmax <= 0)
+      err = "The max value must be positive"
 
-    if(input$variable != "mrate" && (is.na(mrate) || mrate < 0 || mrate > 1))
+    if((variable == "rho" && xmax > 0.5) || (variable == "mutrate" && xmax > 1))
+      err = "Max value is too large"
+
+    if(!is.na(cm0) && cm0 < 0)
+      err = "Marker distance (cm) cannot be negative"
+
+    if(!is.na(rho0) && (rho0 < 0 || rho0 > 0.5))
+      err = "The recombination rate must be between 0 and 0.5"
+
+    if(any(is.na(afr1) | afr1 < 0 | afr1 > 1))
+      err = "Please check that allele frequencies for M1 are between 0 and 1"
+
+    if(any(is.na(afr2) | afr2 < 0 | afr2 > 1))
+      err = "Please check that allele frequencies for M2 are between 0 and 1"
+
+    if(variable != "mutrate" && (is.na(mrate0) || mrate0 < 0 || mrate0 > 1))
       err = "The mutation rate must be between 0 and 1"
 
-    if(!input$variable %in% c("dist", "rho") && (is.na(rho) || rho < 0 || rho > 0.5))
-      err = "The recombination rate must be between 0 and 0.5"
+    if(variable == "mutrate" && is.na(rho0))
+      err = "Please indicate a cM distance or recombination rate"
 
     if(!is.null(err)) {
       errModal(err)
       req(FALSE)
     }
 
-    peds = tryCatch(error = errModal, warning = errModal,
-      lapply(peds(), function(p)
-        p |> setAfreq12(afr) |> setMutmod(model = "equal", rate = mrate)))
+    # Set up pedigrees
+    tryCatch({
+      peds = peds()
+      if(is.na(mrate0)) mrate0 = 0
+      peds[[1]] = peds[[1]] |> setAfreq12(afr1, afr2) |> setMutmod(model = "equal", rate = mrate0)
+      peds[[2]] = peds[[2]] |> setAfreq12(afr1, afr2) |> setMutmod(model = "equal", rate = mrate0)
+    }, error = errModal, warning = errModal)
+
     req(peds)
 
-    # Wrappers
-    lik2 = function(ped, r = rho) likelihood2(ped, 1, 2, rho = r)
-    setFr1 = function(a)  c("1" = a, afr[2:3], "4" = 1 - a - sum(afr[2:3]))
+    # Wrapper
+    likfun = function(ped, rho) likelihood2(ped, marker1 = 1, marker2 = 2, rho = rho)
 
     # Compute likelihoods
-    dat = switch(input$variable,
+    dat = switch(variable,
       dist = tibble(
-        x = seq(0, 200, length = N),
-        lik1 = sapply(x, function(cm) lik2(peds[[1]], r = haldane(cM = cm))),
-        lik2 = sapply(x, function(cm) lik2(peds[[2]], r = haldane(cM = cm))),
+        x = seq(0, xmax, length = N) |> addUser(),
+        lik1 = sapply(x, function(cm) likfun(peds[[1]], rho = mapfun(cM = cm))),
+        lik2 = sapply(x, function(cm) likfun(peds[[2]], rho = mapfun(cM = cm)))
       ),
       rho = tibble(
-        x = seq(0, 0.5, length = N),
-        lik1 = sapply(x, function(r) lik2(peds[[1]], r)),
-        lik2 = sapply(x, function(r) lik2(peds[[2]], r)),
+        x = seq(0, xmax, length = N) |> addUser(),
+        lik1 = sapply(x, function(r) likfun(peds[[1]], rho = r)),
+        lik2 = sapply(x, function(r) likfun(peds[[2]], rho = r)),
       ),
       mutrate = tibble(
-        x = seq(0, 1, length = N),
-        lik1 = sapply(x, function(mutr) peds[[1]] |> setMutmod(rate = mutr, update = T) |> lik2()),
-        lik2 = sapply(x, function(mutr) peds[[2]] |> setMutmod(rate = mutr, update = T) |> lik2()),
-      ),
-      freq = tibble(
-        x = seq(0.0001, 1-0.0001-sum(afr[2:3]), length = N),
-        lik1 = sapply(x, function(a) peds[[1]] |> setAfreq12(setFr1(a)) |> lik2()),
-        lik2 = sapply(x, function(a) peds[[2]] |> setAfreq12(setFr1(a)) |> lik2()),
+        x = seq(0, xmax, length = N) |> addUser(),
+        lik1 = sapply(x, function(mrate) peds[[1]] |> setMutmod(rate = mrate, update = TRUE) |> likfun(rho = rho0)),
+        lik2 = sapply(x, function(mrate) peds[[2]] |> setMutmod(rate = mrate, update = TRUE) |> likfun(rho = rho0)),
       )
     )
 
     dat$LR = dat$lik1/dat$lik2
+    dat$user = FALSE
+    if(hasUser)
+      dat$user[1] = TRUE
+
     dat
   })
 
@@ -328,6 +458,7 @@ server = function(input, output, session) {
   }, execOnResize = TRUE)
 
   output$ibs = renderText({
+    if(debug) message("ibs")
     ibs = getIBS(peds()[[1]])
     HTML(sprintf("# shared alleles: <b>%d</b> and <b>%d</b>", ibs[1], ibs[2]))
   })
@@ -335,7 +466,11 @@ server = function(input, output, session) {
 
   output$graph1 = renderPlotly({
     if(debug) message("graph1")
-    dat = req(LRdat())
+
+    datAll = req(LRdat())
+    dat0 = datAll[datAll$user, , drop = FALSE]
+    dat1 = datAll[!datAll$user, , drop = FALSE]
+
     xlab = names(VARIABLES)[match(input$variable, VARIABLES)]
 
     # Hack to avoid max tick at 0.9.
@@ -347,36 +482,47 @@ server = function(input, output, session) {
       b
     }
 
-    p1 = ggplot(dat, aes(x, LR)) +
-      theme_classic(base_size = 14) +
-      geom_line() + geom_point(size = 0.8) +
+    p1 = ggplot(datAll, aes(x, LR)) +
+      theme_classic(base_size = 13) +
+      geom_hline(yintercept = 1, linetype = "dashed", linewidth = 0.5, col = "gray") +
+      geom_line(aes(group = 1)) +
+      geom_point(data = dat1, size = 0.8) +
+      geom_point(data = dat0, size = 2, shape = 21, fill = "yellow", col = "black") +
       labs(x = xlab, y = "LR") +
-      scale_y_continuous(limits = c(0, max(1, max(dat$LR))),
+      scale_y_continuous(limits = c(0, max(1, max(datAll$LR))),
                          breaks = brks, expand = expansion(mult = c(0, 0.08)))
 
-    ggplotly(p1, tooltip = "y") |> plotly::config(displayModeBar = FALSE)
+    ggplotly(p1, tooltip = c("x", "y")) |>
+      plotly::style(hovertemplate = "x = %{x:.3g}<br>LR = %{y:.4g}<extra></extra>") |>
+      plotly::config(displayModeBar = FALSE)
   })
 
   output$graph2 = renderPlotly({
-    if(debug) message("graph1")
+    if(debug) message("graph2")
+
     dat = req(LRdat())
-    likdat = rbind(data.frame(x = dat$x, lik = dat$lik1, Ped = "Ped 1"),
-                   data.frame(x = dat$x, lik = dat$lik2, Ped = "Ped 2"))
-    likdat$text = paste("Likelihood:", likdat$x)
+    likdat = rbind(data.frame(x = dat$x, lik = dat$lik1, Ped = "Ped 1", user = dat$user),
+                   data.frame(x = dat$x, lik = dat$lik2, Ped = "Ped 2", user = dat$user))
+
+    # Extract user points for separate plotting
+    likdat0 = likdat[likdat$user, , drop = FALSE]
+    likdat1 = likdat[!likdat$user, , drop = FALSE]
 
     xlab = names(VARIABLES)[match(input$variable, VARIABLES)]
 
-    p2 = ggplot(likdat, aes(x, y = lik, col = as.factor(Ped), group = Ped,
-                            text = paste0("x: ", sprintf("%.3g", x), "<br>y: ", sprintf("%.4g", lik)))) +
-      theme_classic(base_size = 14) +
-      geom_line() + geom_point(size = 0.8) +
+    p2 = ggplot(likdat, aes(x, y = lik, col = as.factor(Ped), group = Ped)) +
+      theme_classic(base_size = 13) +
+      geom_line() +
+      geom_point(data = likdat1, size = 0.8) +
+      geom_point(data = likdat0, size = 2, shape = 21, fill = "yellow") +
       labs(x = xlab, y = "Likelihood", col = NULL) +
       scale_y_continuous(limits = c(0, NA),
                          expand = expansion(mult = c(0, 0.08))) +
-      scale_colour_manual(values = c("blue", "red"))
+      scale_colour_manual(values = c("#1F77B4", "#D62780"))
 
-    ggplotly(p2, tooltip = "text") |>
+    ggplotly(p2, tooltip = c("x", "y")) |>
       plotly::config(displayModeBar = FALSE) |>
+      plotly::style(hovertemplate = "x = %{x:.3g}<br>y = %{y:.4g}<extra></extra>") |>
       plotly::layout(
         legend = list(orientation = "h", x = 1, xanchor = "right", y = 1.09,
                       yanchor = "center", bgcolor = "transparent"),
